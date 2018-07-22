@@ -1,0 +1,10 @@
+name = "SparseUtils"
+desc = "utilities for sparse matrices"
+authors = ["John Lapeyre"]
+license = "MIT"
+version = "0.1.0"
+uuid = "36ea9a44-8df6-11e8-3729-cfe5a7e072ff"
+
+[deps]
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+#LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
