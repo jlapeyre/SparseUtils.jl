@@ -1,18 +1,18 @@
 module SparseUtils
 
-export zerotoonebasedindex, zerotoonebasedindex!, sparsity,
+export c_to_julia_index, c_to_julia_index!, sparsity,
        transpose_concrete, sparse_stats
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC
 
 """
-    zerotoonebasedindex!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
 
 Convert a sparse matrix with zero-based indices to a `SparseMatrixCSC`.
 `colptr0` and `rowval0` are altered in place. `nzval` is not copied.
 """
-function zerotoonebasedindex!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+function c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
     colptr0 .+= 1
     rowval0 .+ 1
     m = length(colptr0)-1
@@ -21,13 +21,13 @@ function zerotoonebasedindex!(colptr0, rowval0, nzval)::SparseArrays.SparseMatri
 end
 
 """
-    zerotoonebasedindex(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
 
 Convert a sparse matrix with zero-based indices to a `SparseMatrixCSC`.
 `colptr0` and `rowval0` are copied and altered. `nzval` is not copied.
 """
-function fromzerobasedindex(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
-    fromzerobasedindex!(deepcopy(colptr0), deepcopy(rowval0), nzval)
+function c_to_julia_index(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index!(deepcopy(colptr0), deepcopy(rowval0), nzval)
 end
 
 """
@@ -47,7 +47,7 @@ Return the concrete transpose of the sparse matrix `M`. That is,
 return a new sparse matrix, rather`M` wrapped in `Transpose`.
 """
 function transpose_concrete(M::SparseMatrixCSC)
-    I1, J, V = findnz(M)
+    I1, J, V = SparseArrays.findnz(M)
     m, n = size(M)
     return SparseArrays.sparse(J, I1, V, n, m)
 end
