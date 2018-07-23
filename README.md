@@ -1,6 +1,6 @@
 # SparseUtils
 
-* Utilities for sparse matrices *
+*Utilities for sparse matrices*
 
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://jlapeyre.github.io/SparseUtils.jl/latest)
 [![Build Status](https://travis-ci.org/jlapeyre/SparseUtils.jl.svg?branch=master)](https://travis-ci.org/jlapeyre/SparseUtils.jl)
