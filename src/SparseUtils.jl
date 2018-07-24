@@ -1,16 +1,14 @@
 module SparseUtils
 
 export c_to_julia_index, c_to_julia_index!, sparsity,
-    nnzcounts, sparse_stats, nrows, ncols
+    nnzcounts, sparse_stats, nrows, ncols,
+    prunecols!, dropzerocols
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
 import DataUtils
 import StatsBase
 import Printf
-
-nrows(sp::SparseMatrixCSC) = size(sp)[1]
-ncols(sp::SparseMatrixCSC) = size(sp)[2]
 
 """
     c_to_julia_index!(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
@@ -22,9 +20,9 @@ nor altered.
 function c_to_julia_index!(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
     colptr .= colptr .+ 1
     rowval .= rowval .+ 1
-    m = length(colptr)-1
-    n = maximum(rowval)
-    return SparseArrays.SparseMatrixCSC(n, m, colptr, rowval, nzval)
+    n = length(colptr)-1
+    m = maximum(rowval)
+    return SparseMatrixCSC(m, n, colptr, rowval, nzval)
 end
 
 """
@@ -93,6 +91,11 @@ function nnzcounts(sp::SparseMatrixCSC; rev=true, byvalue=true)
     return sorted_spcountmap
 end
 
+# These may have been in SparseArrays, but were removed.
+# They are very convenient at the command line.
+nrows(sp::SparseMatrixCSC) = size(sp)[1]
+ncols(sp::SparseMatrixCSC) = size(sp)[2]
+
 """
     nnzcols(sp::SparseMatrixCSC)
 
@@ -103,7 +106,17 @@ function nnzcols(sp::SparseMatrixCSC)
     (nnz(sp, i) for i in 1:ncols(sp))
 end
 
+function prunecols!(sp::SparseMatrixCSC, min_connections)
+    connection_flags = [nnz(sp, j) >= min_connections for j in 1:ncols(sp)]
+    SparseArrays.fkeep!(sp, (i, j, v) -> connection_flags[j], true)
+    return sp
+end
 
+function dropzerocols(sp::SparseMatrixCSC)
+    newcolptr = unique(sp.colptr)
+    n = length(newcolptr) - 1
+    SparseMatrixCSC(sp.m, n, newcolptr, sp.rowval, sp.nzval)
+end
 
 """
     sparse_stats(sp::SparseMatrixCSC)
