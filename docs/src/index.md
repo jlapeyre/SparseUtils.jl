@@ -20,6 +20,7 @@ The source repository is [https://github.com/jlapeyre/SparseUtils.jl](https://gi
 sparsity
 sparse_stats
 nnz
+numconnections
 c_to_julia_index!
 c_to_julia_index
 transpose_concrete
