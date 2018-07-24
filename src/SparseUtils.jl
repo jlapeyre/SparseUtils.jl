@@ -4,7 +4,7 @@ export c_to_julia_index, c_to_julia_index!, sparsity,
        transpose_concrete, sparse_stats
 
 import SparseArrays
-import SparseArrays: SparseMatrixCSC
+import SparseArrays: SparseMatrixCSC, nnz
 
 """
     c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
