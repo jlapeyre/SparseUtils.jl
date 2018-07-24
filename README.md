@@ -15,6 +15,6 @@ See the documentation pages or the doc strings for
 * `nnz` extended to operate on columns
 * `c_to_julia_index`, `c_to_julia_index!` import zero-based-indexing data
 * `sparsity` compute sparsity
-* `transpose_concrete` return another `SparseMatrixCSC`
+* `transpose(M::SparseMatrixCSC, lazy=true)` return a lazy or material transpose.
 * `sparse_stats` print some measurements
-* `numconnections` count map over columns of number of non-zeros
+* `nnzcounts` count map over columns of number of non-zeros

@@ -1,36 +1,40 @@
 module SparseUtils
 
 export c_to_julia_index, c_to_julia_index!, sparsity,
-       transpose_concrete, numconnections, sparse_stats
+    nnzcounts, sparse_stats, nrows, ncols
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
-import DataStructuresUtils
+import DataUtils
 import StatsBase
 import Printf
 
+nrows(sp::SparseMatrixCSC) = size(sp)[1]
+ncols(sp::SparseMatrixCSC) = size(sp)[2]
+
 """
-    c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index!(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
 
 Convert a sparse matrix with zero-based indices to a `SparseMatrixCSC`.
-`colptr0` and `rowval0` are altered in place. `nzval` is not copied.
+`colptr` and `rowval` are altered in place. `nzval` is neither copied
+nor altered.
 """
-function c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
-    colptr = colptr0 .+ 1
-    rowval = rowval0 .+ 1
+function c_to_julia_index!(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
+    colptr .= colptr .+ 1
+    rowval .= rowval .+ 1
     m = length(colptr)-1
     n = maximum(rowval)
     return SparseArrays.SparseMatrixCSC(n, m, colptr, rowval, nzval)
 end
 
 """
-    c_to_julia_index(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
 
 Convert a sparse matrix with zero-based indices to a `SparseMatrixCSC`.
-`colptr0` and `rowval0` are copied and altered. `nzval` is not copied.
+`colptr` and `rowval` are not altered, but rather copied. `nzval` is neither copied, nor altered.
 """
-function c_to_julia_index(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
-    c_to_julia_index!(deepcopy(colptr0), deepcopy(rowval0), nzval)
+function c_to_julia_index(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
+    c_to_julia_index!(deepcopy(colptr), deepcopy(rowval), nzval)
 end
 
 """
@@ -44,17 +48,16 @@ function sparsity(sp::SparseMatrixCSC)
 end
 
 """
-    transpose_concrete(M::SparseMatrixCSC)
+    transpose(M::SparseMatrixCSC; lazy=true)
 
-Return the concrete transpose of the sparse matrix `M`. That is,
-return a new `SparseMatrixCSC`, rather than `M` wrapped in `Transpose`.
+Return the lazy transpose of `M` if `lazy=true` and the material
+transpose otherwise. The lazy transpose is not really lazy in
+the sense that it is not automatically materialized on demand.
 
 Note that this does *not* return (or have any relation to) a dense matrix.
 """
-function transpose_concrete(M::SparseMatrixCSC)
-    I1, J, V = SparseArrays.findnz(M)
-    m, n = size(M)
-    return SparseArrays.sparse(J, I1, V, n, m)
+function Base.transpose(M::SparseMatrixCSC, lazy=true)
+    return lazy ? SparseArrays.Transpose(M) : SparseArrays.ftranspose(M, identity)
 end
 
 """
@@ -68,7 +71,7 @@ function SparseArrays.nnz(sp::SparseMatrixCSC, colnum::Integer)
 end
 
 """
-    numconnections(sp::SparseMatrixCSC; rev=true, byvalue=true)
+    nnzcounts(sp::SparseMatrixCSC; rev=true, byvalue=true)
 
 Return a sorted countmap of the number of structural non-zeros
 in the columns of `sp`. The keys controlling the sorting are
@@ -78,7 +81,7 @@ passed to `StatsBase.sort`.
 In this example, there are 132781 columns with one non-zero element,
 32096 columns with two, etc.
 ```julia
-julia> conns = numconnections(sp);
+julia> conns = nnzcounts(sp);
 
 julia> collect(Iterators.take(conns,3))
 3-element Array{Pair{Int64,Int64},1}:
@@ -87,12 +90,23 @@ julia> collect(Iterators.take(conns,3))
  3 => 17478
 ```
 """
-function numconnections(sp::SparseMatrixCSC; rev=true, byvalue=true)
-    iter = (nnz(sp, i) for i in 1:size(sp)[2])
-    spcountmap = DataStructuresUtils.countmap(iter, datatype=Int)
+function nnzcounts(sp::SparseMatrixCSC; rev=true, byvalue=true)
+    spcountmap = DataUtils.countmap(nnzcols(sp), datatype=Int)
     sorted_spcountmap = StatsBase.sort(spcountmap, rev=rev, byvalue=rev)
     return sorted_spcountmap
 end
+
+"""
+    nnzcols(sp::SparseMatrixCSC)
+
+Return an iterator over the number of non-zero elements
+in each column of `sp`.
+"""
+function nnzcols(sp::SparseMatrixCSC)
+    (nnz(sp, i) for i in 1:ncols(sp))
+end
+
+
 
 """
     sparse_stats(sp::SparseMatrixCSC)
@@ -113,6 +127,10 @@ function sparse_stats(sp::SparseMatrixCSC)
     return nothing
 end
 
+# function prune(sp::SparseMatrixCSC)
+#     (I, J, V) = SparseArrays.findnz(sp)
+# end
+
 end # module SparseUtils
 
-#  LocalWords:  numconnections countmap sp
+#  LocalWords:  nnzcounts countmap sp
