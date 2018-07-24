@@ -1,10 +1,12 @@
 module SparseUtils
 
 export c_to_julia_index, c_to_julia_index!, sparsity,
-       transpose_concrete, sparse_stats
+       transpose_concrete, numconnections, sparse_stats
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
+import DataStructuresUtils
+import StatsBase
 
 """
     c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
@@ -13,11 +15,11 @@ Convert a sparse matrix with zero-based indices to a `SparseMatrixCSC`.
 `colptr0` and `rowval0` are altered in place. `nzval` is not copied.
 """
 function c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
-    colptr0 .+= 1
-    rowval0 .+ 1
-    m = length(colptr0)-1
-    n = maximum(rowval0)
-    return SparseArrays.SparseMatrixCSC(n, m, colptr0, rowval0, nzval)
+    colptr = colptr0 .+ 1
+    rowval = rowval0 .+ 1
+    m = length(colptr)-1
+    n = maximum(rowval)
+    return SparseArrays.SparseMatrixCSC(n, m, colptr, rowval, nzval)
 end
 
 """
@@ -44,7 +46,9 @@ end
     transpose_concrete(M::SparseMatrixCSC)
 
 Return the concrete transpose of the sparse matrix `M`. That is,
-return a new sparse matrix, rather`M` wrapped in `Transpose`.
+return a new `SparseMatrixCSC`, rather than `M` wrapped in `Transpose`.
+
+Note that this does *not* return (or have any relation to) a dense matrix.
 """
 function transpose_concrete(M::SparseMatrixCSC)
     I1, J, V = SparseArrays.findnz(M)
@@ -60,6 +64,33 @@ column of `sp`.
 """
 function SparseArrays.nnz(sp::SparseMatrixCSC, colnum::Integer)
     return length(SparseArrays.nzrange(sp, colnum))
+end
+
+"""
+    numconnections(sp::SparseMatrixCSC; rev=true, byvalue=true)
+
+Return a sorted countmap of the number of structural non-zeros
+in the columns of `sp`. The keys controlling the sorting are
+passed to `StatsBase.sort`.
+
+# Examples
+In this example, there are 132781 columns with one non-zero element,
+32096 columns with two, etc.
+```julia
+julia> conns = numconnections(sp);
+
+julia> collect(Iterators.take(conns,3))
+3-element Array{Pair{Int64,Int64},1}:
+ 1 => 132781
+ 2 => 32096
+ 3 => 17478
+```
+"""
+function numconnections(sp::SparseMatrixCSC; rev=true, byvalue=true)
+    iter = (nnz(sp, i) for i in 1:size(sp)[2])
+    spcountmap = DataStructuresUtils.countmap(iter, datatype=Int)
+    sorted_spcountmap = StatsBase.sort(spcountmap, rev=rev, byvalue=rev)
+    return sorted_spcountmap
 end
 
 """
@@ -80,3 +111,5 @@ function sparse_stats(sp::SparseMatrixCSC)
 end
 
 end # module SparseUtils
+
+#  LocalWords:  numconnections countmap sp
