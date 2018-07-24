@@ -17,11 +17,11 @@ The source repository is [https://github.com/jlapeyre/SparseUtils.jl](https://gi
 ## Functions
 
 ```@docs
+SparseUtils.transpose
 sparsity
 sparse_stats
-nnz(sp::SparseMatrixCSC, colnum::Integer)
+SparseUtils.nnz(sp::SparseMatrixCSC, colnum::Integer)
 nnzcounts
 c_to_julia_index!
 c_to_julia_index
-transpose(M::SparseMatrixCSC, lazy=true)
 ```

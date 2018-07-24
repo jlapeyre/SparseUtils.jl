@@ -51,12 +51,9 @@ end
     transpose(M::SparseMatrixCSC; lazy=true)
 
 Return the lazy transpose of `M` if `lazy=true` and the material
-transpose otherwise. The lazy transpose is not really lazy in
-the sense that it is not automatically materialized on demand.
-
-Note that this does *not* return (or have any relation to) a dense matrix.
+transpose, of type `SparseMatrixCSC`, otherwise.
 """
-function Base.transpose(M::SparseMatrixCSC, lazy=true)
+function Base.transpose(M::SparseMatrixCSC; lazy=true)
     return lazy ? SparseArrays.Transpose(M) : SparseArrays.ftranspose(M, identity)
 end
 

@@ -1,6 +1,6 @@
 using SparseUtils
 import SparseArrays
-import SparseArrays.transpose
+import SparseUtils.transpose
 using Serialization
 using Test
 
@@ -13,8 +13,8 @@ using Test
 
     expected_size = (30, 70)
     @test size(sparse_array) == expected_size
-    @test SparseArrays.transpose(sparse_array, lazy=false) > size == (expected_size[2], expected_size[1])
-    @test SparseArrays.transpose(SparseArrays.transpose(sparse_array, lazy=false), lazy=false) == sparse_array
+    @test transpose(sparse_array, lazy=false) |> size == (expected_size[2], expected_size[1])
+    @test transpose(transpose(sparse_array, lazy=false), lazy=false) == sparse_array
 
     # nnz defined for columns
     @test sum(map(i -> SparseArrays.nnz(sparse_array, i),  1:size(sparse_array)[2])) == SparseArrays.nnz(sparse_array)
