@@ -7,6 +7,7 @@ import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
 import DataStructuresUtils
 import StatsBase
+import Printf
 
 """
     c_to_julia_index!(colptr0, rowval0, nzval)::SparseArrays.SparseMatrixCSC
@@ -96,16 +97,18 @@ end
 """
     sparse_stats(sp::SparseMatrixCSC)
 
-Print some characteristics of `sp`.
+Print some statistics for `sp`. The line
+"number of non-zeros" counts structural non-zeros.
 """
 function sparse_stats(sp::SparseMatrixCSC)
-    for s in (
-        string("sparse matrix size: size(sp) = ", size(sp)),
-        string("number of elements: length(sp) = ", length(sp)),
-        string("number of non-zero elements: nnz(sp) = ", SparseArrays.nnz(sp)),
-        string("sparsity: ", sparsity(sp)))
-
-        println(s)
+    padding = 18
+    for (description, statistic) in (
+        ("size", size(sp)),
+        ("num. elements", length(sp)),
+        ("num. non-zeros", nnz(sp)),
+        ("sparsity", Printf.@sprintf("%.4e", sparsity(sp))),
+        ("num. stored zeros", count(iszero, SparseArrays.nonzeros(sp))))
+        println(rpad(description, padding), ": ", statistic)
     end
     return nothing
 end
