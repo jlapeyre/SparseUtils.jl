@@ -2,7 +2,7 @@ module SparseUtils
 
 export c_to_julia_index, c_to_julia_index!, sparsity,
     nnzcounts, sparse_stats, nrows, ncols,
-    prunecols!, dropzerocols
+    prunecols!, dropzerocols, dropzerorows
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
@@ -102,12 +102,10 @@ ncols(sp::SparseMatrixCSC) = size(sp)[2]
 Return an iterator over the number of non-zero elements
 in each column of `sp`.
 """
-function nnzcols(sp::SparseMatrixCSC)
-    (nnz(sp, i) for i in 1:ncols(sp))
-end
+nnzcols(sp::SparseMatrixCSC) = (nnz(sp, i) for i in 1:ncols(sp))
 
 function prunecols!(sp::SparseMatrixCSC, min_connections)
-    connection_flags = [nnz(sp, j) >= min_connections for j in 1:ncols(sp)]
+    connection_flags = [nnz(sp, j) >= min_connections for j in 1:ncols(sp)] # This must not change during fkeep!
     SparseArrays.fkeep!(sp, (i, j, v) -> connection_flags[j], true)
     return sp
 end
@@ -116,6 +114,14 @@ function dropzerocols(sp::SparseMatrixCSC)
     newcolptr = unique(sp.colptr)
     n = length(newcolptr) - 1
     SparseMatrixCSC(sp.m, n, newcolptr, sp.rowval, sp.nzval)
+end
+
+function dropzerorows(sp::SparseMatrixCSC)
+    sorted_rowval = sort!(unique(sp.rowval))
+    rowval_type = eltype(sp.rowval)
+    renumbered_rowval = rowval_type[searchsortedfirst(sorted_rowval, val) for val in sp.rowval]
+    m = length(sorted_rowval)
+    SparseMatrixCSC(m, sp.n, sp.colptr, renumbered_rowval, sp.nzval)
 end
 
 """
@@ -136,10 +142,6 @@ function sparse_stats(sp::SparseMatrixCSC)
     end
     return nothing
 end
-
-# function prune(sp::SparseMatrixCSC)
-#     (I, J, V) = SparseArrays.findnz(sp)
-# end
 
 end # module SparseUtils
 
