@@ -23,6 +23,7 @@ export
     hasemptycols,
     hasemptyrows
 
+include("coo.jl")
 include("csc.jl")
 
 end # module SparseUtils
