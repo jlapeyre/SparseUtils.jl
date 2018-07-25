@@ -1,4 +1,4 @@
-__precompile__()
+#__precompile__()
 
 module SparseUtils
 
@@ -17,9 +17,9 @@ export
     nrows,
     ncols,
     prunecols!,
-    dropzerocols,
-    dropzerorows,
-    dropzerorowscols,
+    renumbercols,
+    renumberrows,
+    renumberrowscols,
     hasemptycols,
     hasemptyrows
 

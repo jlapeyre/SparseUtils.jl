@@ -116,19 +116,19 @@ zeros.
 hasemptycols(sp::SparseMatrixCSC) = length(sp.colptr) != length(unique(sp.colptr))
 
 """
-    dropzerocols(sp::SparseMatrixCSC)
+    renumbercols(sp::SparseMatrixCSC)
 
 If `sp` has "empty" columns as determined by `hasemptycols`, then remove these
 columns and renumber the remaining columns. A new `SparseMatrixCSC` is returned.
 Modifying elements of `.rowval` and `.nzval` in the output matrix will change
 these values in `sp`.
 """
-function dropzerocols(sp::SparseMatrixCSC)
-    (newcolptr, n) = _dropzerocols(sp)
+function renumbercols(sp::SparseMatrixCSC)
+    (newcolptr, n) = _renumbercols(sp)
     SparseMatrixCSC(sp.m, n, newcolptr, sp.rowval, sp.nzval)
 end
 
-function _dropzerocols(sp::SparseMatrixCSC)
+function _renumbercols(sp::SparseMatrixCSC)
     newcolptr = unique(sp.colptr)
     n = length(newcolptr) - 1
     return (newcolptr, n)
@@ -148,19 +148,19 @@ function hasemptyrows(sp::SparseMatrixCSC)
 end
 
 """
-    dropzerorow(sp::SparseMatrixCSC)
+    renumberrow(sp::SparseMatrixCSC)
 
 If `sp` has "empty" rows as determined by `hasemptycols`, then remove these
 columns and renumber the remaining columns. A new `SparseMatrixCSC` is returned.
 Modifying elements of `.rowval` and `.nzval` in the output matrix will change
 these values in `sp`.
 """
-function dropzerorows(sp::SparseMatrixCSC)
-    (renumbered_rowval, m) = _dropzerorows(sp)
+function renumberrows(sp::SparseMatrixCSC)
+    (renumbered_rowval, m) = _renumberrows(sp)
     SparseMatrixCSC(m, sp.n, sp.colptr, renumbered_rowval, sp.nzval)
 end
 
-function _dropzerorows(sp::SparseMatrixCSC)
+function _renumberrows(sp::SparseMatrixCSC)
     sorted_rowval = sort!(unique(sp.rowval))
     rowval_type = eltype(sp.rowval)
     renumbered_rowval = rowval_type[searchsortedfirst(sorted_rowval, val) for val in sp.rowval]
@@ -169,13 +169,13 @@ function _dropzerorows(sp::SparseMatrixCSC)
 end
 
 """
-    dropzerorowscols(sp::SparseMatrixCSC)
+    renumberrowscols(sp::SparseMatrixCSC)
 
-Perform both `dropzerorows` and `dropzerocols` on `sp`
+Perform both `renumberrows` and `renumbercols` on `sp`
 """
-function dropzerorowscols(sp::SparseMatrixCSC)
-    (newcolptr, n) = _dropzerocols(sp)
-    (renumbered_rowval, m) = _dropzerorows(sp)
+function renumberrowscols(sp::SparseMatrixCSC)
+    (newcolptr, n) = _renumbercols(sp)
+    (renumbered_rowval, m) = _renumberrows(sp)
     return SparseMatrixCSC(m, n, newcolptr, renumbered_rowval, sp.nzval)
 end
 
