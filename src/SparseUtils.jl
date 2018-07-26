@@ -1,9 +1,9 @@
 #__precompile__()
-
 module SparseUtils
 
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
+import LinearAlgebra
 import DataUtils
 import StatsBase
 import Printf
@@ -13,7 +13,7 @@ export
     c_to_julia_index!,
     sparsity,
     nnzcounts,
-    sparse_stats,
+    summarystats,
     nrows,
     ncols,
     prunecols!,
@@ -25,6 +25,7 @@ export
 
 include("coo.jl")
 include("csc.jl")
+include("abstract.jl")
 
 end # module SparseUtils
 

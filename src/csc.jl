@@ -23,25 +23,17 @@ function c_to_julia_index(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
     c_to_julia_index!(deepcopy(colptr), deepcopy(rowval), nzval)
 end
 
-"""
-    sparsity(sp::SparseMatrixCSC)
+# We should use a doc like this.
+# """
+#     transpose(M::SparseMatrixCSC)
 
-Compute the sparisty of `sp`. This assumes that there
-are no stored values equal to zero.
-"""
-function sparsity(sp::SparseMatrixCSC)
-    return SparseArrays.nnz(sp) / length(sp)
-end
+# Return the lazy transpose of `M`, which is a thin wrapper
+# around `M`. To get the material
+# transpose, which is another matrix of type `SparseMatrixCSC`,
+# use `materialize(transpose(M))`.
+# """
 
-"""
-    transpose(M::SparseMatrixCSC; lazy=true)
-
-Return the lazy transpose of `M` if `lazy=true` and the material
-transpose, of type `SparseMatrixCSC`, otherwise.
-"""
-function Base.transpose(M::SparseMatrixCSC; lazy=true)
-    return lazy ? SparseArrays.Transpose(M) : SparseArrays.ftranspose(M, identity)
-end
+material_transpose(M::SparseMatrixCSC) = SparseArrays.ftranspose(M, identity)
 
 """
     nnz(sp::SparseMatrixCSC, colnum::Integer)
@@ -177,23 +169,4 @@ function renumberrowscols(sp::SparseMatrixCSC)
     (newcolptr, n) = _renumbercols(sp)
     (renumbered_rowval, m) = _renumberrows(sp)
     return SparseMatrixCSC(m, n, newcolptr, renumbered_rowval, sp.nzval)
-end
-
-"""
-    sparse_stats(sp::SparseMatrixCSC)
-
-Print some statistics for `sp`. The line
-"number of non-zeros" counts structural non-zeros.
-"""
-function sparse_stats(sp::SparseMatrixCSC)
-    padding = 18
-    for (description, statistic) in (
-        ("size", size(sp)),
-        ("num. elements", length(sp)),
-        ("num. non-zeros", nnz(sp)),
-        ("sparsity", Printf.@sprintf("%.4e", sparsity(sp))),
-        ("num. stored zeros", count(iszero, SparseArrays.nonzeros(sp))))
-        println(rpad(description, padding), ": ", statistic)
-    end
-    return nothing
 end
