@@ -1,6 +1,8 @@
 using SparseUtils
 import SparseArrays
+import SparseArrays: SparseMatrixCSC
 import SparseUtils: transpose, materialize
+import SparseUtils:  SparseMatrixCOO
 using Serialization
 using Test
 
@@ -9,7 +11,7 @@ let
         deserialize(io)
     end
     expected_size = (30, 70)
-
+    expected_sum = 1.6277046559059591
     @testset "measurements" begin
         @test size(sparse_array) == expected_size
     end
@@ -28,4 +30,11 @@ let
         # nnz defined for columns
         @test sum(map(i -> SparseArrays.nnz(sparse_array, i),  1:size(sparse_array)[2])) == SparseArrays.nnz(sparse_array)
     end
+
+    let sparse_array_coo = SparseMatrixCOO(sparse_array)
+        @testset "conversion" begin
+            @test SparseMatrixCSC(sparse_array_coo) == sparse_array
+        end
+    end
+#    @test isapprox(sum(sparse_array), expected_sum)
 end
