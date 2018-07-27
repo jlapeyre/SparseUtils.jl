@@ -1,7 +1,59 @@
 module IJV
 
+import Random
+import SparseArrays
+
 ## Algorithms for coo representation of sparse matrices
-## This module only makes use of builtin types.
+## This module makes use of builtin types only.
+
+issorted(I, J) = Base.issorted(zip(J, I))
+
+function getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
+    colrange = searchsorted(J, j)
+    isempty(colrange) && return zeroel
+    rowrange = searchsorted(view(I, colrange), i)
+    isempty(rowrange) && return zeroel
+    return V[first(rowrange) + first(colrange) - 1]
+end
+
+function ijvinsert!(ind, arrays = (I, J, V), elements = (i, j, val))
+    for (array, element) in zip(arrays, elements)
+        insert!(array, ind, element)
+    end
+    return nothing
+end
+
+function ijvsetindex!(ind, arrays = (I, J, V), elements = (i, j, val))
+    for (array, element) in zip(arrays, elements)
+        array[ind] = element
+    end
+    return nothing
+end
+
+function setindex!(I, J, V, val, i::Integer, j::Integer; zeroel=zero(eltype(V)))
+    rowrange = searchsorted(I, i)
+    if isempty(rowrange)
+        ind = first(rowrange)
+        ijvinsert!(ind, (I, J, V), (i, j, val))
+    else
+        colrange = searchsorted(view(J, rowrange), j)
+        if isempty(colrange)
+            ijvinsert!(first(colrange), (I, J, V), (i, j, val))
+        else
+            valind = first(colrange) + first(rowrange) - 1
+            ijvsetindex!(valind, (I, J, V), (i, j, val))
+        end
+    end
+    return val
+end
+
+function Array(m, n, I, J, V)
+    a = zeros(eltype(V), m, n)
+    for ind in 1:length(I)
+        a[I[ind], J[ind]] = V[ind]
+    end
+    return a
+end
 
 function dropzeros!(I, J, V::AbstractArray{T}) where T
     mask = V .== zero(T)
@@ -9,9 +61,17 @@ function dropzeros!(I, J, V::AbstractArray{T}) where T
 end
 dropzeros(I, J, V::AbstractArray) = dropzeros!(copy(I), copy(J), copy(V))
 
+spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
+spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
+function spzeros(::Type{Tv}, ::Type{Ti}, m::Integer, n::Integer) where {Tv, Ti}
+    ((m < 0) || (n < 0)) && throw(ArgumentError("invalid Array dimensions"))
+    return (m, n, Ti[], Ti[], Tv[])
+#    SparseMatrixCSC(m, n, fill(one(Ti), n+1), Vector{Ti}(), Vector{Tv}())
+end
+
 # This is copied from sparsematrix.jl, modified only to change the order of the arguments
 function rot180!(m, n, I, J, V)
-    for i=1:length(I)
+   @inbounds for i=1:length(I)
         I[i] = m - I[i] + 1
         J[i] = n - J[i] + 1
     end
@@ -20,7 +80,7 @@ end
 
 function rotr90!(m, n, I, J, V)
     #old col inds are new row inds
-    for i=1:length(I)
+   @inbounds for i=1:length(I)
         I[i] = m - I[i] + 1
     end
     return (n, m, J, I, V)
@@ -28,10 +88,46 @@ end
 
 function rotl90!(m, n, I, J, V)
     #old row inds are new col inds
-    for i=1:length(J)
+  @inbounds for i=1:length(J)
         J[i] = n - J[i] + 1
     end
     return (n, m, J, I, V)
 end
+
+permutedims!(m, n, I, J, V) = (n, m, J, I, V)
+permutedims(m, n, I, J, V) = permutedims!(m, n, copy(I), copy(J), copy(V))
+
+_empty_IJV(T) = (Int[], Int[], T[])
+
+function sprand(m::Integer, n::Integer, density::AbstractFloat,
+                rfn::Function, ::Type{T}=eltype(rfn(rng,1))) where T
+    return sprand(Random.GLOBAL_RNG, m, n, density, rfn, eltype)
+end
+
+function sprand(rng::Random.AbstractRNG, m::Integer, n::Integer, density::AbstractFloat,
+                rfn::Function, ::Type{T}=eltype(rfn(rng,1))) where T
+    N = m*n
+    if N == 0
+        (I, J, V) = _empty_IJV(T)
+    elseif N == 1
+        if rand(rng) <= density
+            (I, J, V) = ([1], [1], rfn(rng, 1))
+        else
+            (I, J, V) = _empty_IJV(T)
+        end
+    else
+        I, J = SparseArrays.sprand_IJ(rng, m, n, density)
+        V = rfn(rng, length(I))
+    end
+    return (m, n, I, J, V)
+end
+
+truebools(r::Random.AbstractRNG, n::Integer) = fill(true, n)
+sprand(m::Integer, n::Integer, density::AbstractFloat) = sprand(Random.GLOBAL_RNG,m,n,density)
+
+sprand(r::Random.AbstractRNG, m::Integer, n::Integer, density::AbstractFloat) = sprand(r,m,n,density,rand,Float64)
+sprand(r::Random.AbstractRNG, ::Type{T}, m::Integer, n::Integer, density::AbstractFloat) where {T} = sprand(r,m,n,density,(r, i) -> rand(r, T, i), T)
+sprand(r::Random.AbstractRNG, ::Type{Bool}, m::Integer, n::Integer, density::AbstractFloat) = sprand(r,m,n,density, truebools, Bool)
+sprand(::Type{T}, m::Integer, n::Integer, density::AbstractFloat) where {T} = sprand(Random.GLOBAL_RNG, T, m, n, density)
 
 end # module

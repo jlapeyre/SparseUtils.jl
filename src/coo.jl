@@ -6,7 +6,7 @@ export
     SparseMatrixCOO,
     renumbercols!
 
-struct SparseMatrixCOO{Tv, Ti<:Integer} # <: SparseArrays.AbstractSparseMatrix{T, W}
+struct SparseMatrixCOO{Tv, Ti<:Integer}  #  <: SparseArrays.AbstractSparseMatrix{Tv, Ti}
     m::Int
     n::Int
     Ir::Vector{Ti}
@@ -14,24 +14,32 @@ struct SparseMatrixCOO{Tv, Ti<:Integer} # <: SparseArrays.AbstractSparseMatrix{T
     nzval::Vector{Tv}
     function SparseMatrixCOO(m, n, Ir::Vector{Ti}, Ic::Vector{Ti}, nzval::Vector{Tv}) where {Ti <: Integer, Tv}
         length(Ir) == length(Ic) == length(nzval) || throw(DimensionMismatch("Ir, Ic, and nzval must have the same length."))
-        m < maximum(Ir) && throw(DimensionMismatch("Maximum row index $(maximum(Ir)) greater than row dimension $m."))
-        n < maximum(Ic) && throw(DimensionMismatch("Maximum column index greater than column dimension."))
+        (!isempty(Ir) && m < maximum(Ir)) &&
+            throw(DimensionMismatch("Maximum row index $(maximum(Ir)) greater than row dimension $m."))
+        (!isempty(Ic) && n < maximum(Ic)) && throw(DimensionMismatch("Maximum column index greater than column dimension."))
         new{Tv, Ti}(m, n, Ir, Ic, nzval)
     end
 end
 
+Base.length(coo::SparseMatrixCOO) = coo.n * coo.m
+Base.size(coo::SparseMatrixCOO) = (coo.m, coo.m)
 Base.eltype(coo::SparseMatrixCOO{Tv, Ti}) where {Tv, Ti} = Tv
+Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S.Ic, S.nzval, i, j)
+Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
+Base.issorted(S::SparseMatrixCOO) = IJV.issorted(S.Ir, S.Ic)
+
+spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = SparseMatrixCOO(IJV.spzeros(args...)...)
+#spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = IJV.spzeros(args...)
+
 nnz(coo::SparseMatrixCOO) = length(coo.Ir)
 nonzeros(coo::SparseMatrixCOO) = coo.nzval
 ncols(coo::SparseMatrixCOO) = coo.n
 nrows(coo::SparseMatrixCOO) = coo.m
-Base.length(coo::SparseMatrixCOO) = coo.n * coo.m
-Base.size(coo::SparseMatrixCOO) = (coo.m, coo.m)
 
-# The @inline decorations and the hardcoding of functions for reduction increase
+# The @inline decorations and the hardcoding of functions in reduction increase
 # speed dramatically. But, this may depend on Julia version.
 
-nzvalview(S::SparseMatrixCOO) = view(S.nzval, 1:nnz(S))
+@inline nzvalview(S::SparseMatrixCOO) = view(S.nzval, 1:nnz(S))
 @inline Base.count(pred, S::SparseMatrixCOO) = NZVal._count(pred, S.m, S.n, nzvalview(S), length(S.nzval))
 
 ## FIXME: this is probably never called because SparseMatrixCOO is not a AbstractArray
@@ -72,10 +80,11 @@ function SparseMatrixCOO(spcsc::SparseMatrixCSC)
     SparseMatrixCOO(nrows(spcsc), ncols(spcsc), SparseArrays.findnz(spcsc)...)
 end
 
-function SparseMatrixCSC(coo::SparseMatrixCOO)
-    return SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
-end
+SparseMatrixCSC(coo::SparseMatrixCOO) = SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
+Base.Array(S::SparseMatrixCOO) = IJV.Array(S.m, S.n, S.Ir, S.Ic, S.nzval)
 
+## renumbercols, renumberrows
+## FIXME: Factor out the builtin-only core.
 # Wow, this is not super-readable
 for (dim, Ind) in ((:cols, :Ic), (:rows, :Ir))
     renumberdim = Symbol(:renumber, dim)
@@ -148,7 +157,7 @@ renumberrowscols(S::SparseMatrixCOO) = S |> renumberrows |> renumbercols
 
 Equivalent to applying `renumberrows!` and `renumbercols!`
 """
-renumberrowscols(S::SparseMatrixCOO) = S |> renumberrows |> renumbercols
+renumberrowscols!(S::SparseMatrixCOO) = S |> renumberrows! |> renumbercols!
 
 for f in (:rotr90, :rotl90, :rot180)
     ijvf = Symbol(f, "!")
@@ -169,3 +178,30 @@ rotate `S` counter-clockwise 90 degrees.
     rot180(S::SparseMatrixCOO)
 rotate `S` 180 degrees.
 """ rot180
+
+"""
+    permutedims!(S::SparseMatrixCOO)
+
+Transpose `S` in place.
+"""
+Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(S.m, S.m, S.Ir, S.Ic, S.nzval)...)
+
+"""
+    permutedims(S::SparseMatrixCOO)
+
+Return a transposed copy of `S`..
+"""
+Base.permutedims(S::SparseMatrixCOO) = permutedims!(copy(S))
+
+# The would require reproducing a lot of code that assumes the sparse matrix is an AbstractArray
+Base.transpose(S::SparseMatrixCOO) = throw(DomainError("Tranpose not implemented because `SparseMatrixCOO` is not an `AbstractArray`"))
+
+function SparseArrays.sprand(args...; sparsetype=Type{SparseMatrixCOO})
+    if sparsetype == SparseMatrixCOO
+        return SparseMatrixCOO(IJV.sprand(args...)...)
+    elseif sparsetype == SparseMatrixCSC
+        return SparseArrays.sprand(args...)
+    else
+        throw(ArgumentError("Unsupported sparse matrix type"))
+    end
+end
