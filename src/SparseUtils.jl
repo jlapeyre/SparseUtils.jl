@@ -23,9 +23,12 @@ export
     hasemptycols,
     hasemptyrows
 
+include("nzval.jl")
+include("ijv.jl")
 include("coo.jl")
 include("csc.jl")
 include("abstract.jl")
+
 
 end # module SparseUtils
 

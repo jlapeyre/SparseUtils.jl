@@ -6,7 +6,7 @@ import SparseUtils:  SparseMatrixCOO
 using Serialization
 using Test
 
-let
+let # typeof(sparse_array) = SparseMatrixCSC
     sparse_array = open("sparse_array.dat", "r") do io
         deserialize(io)
     end
@@ -32,9 +32,21 @@ let
     end
 
     let sparse_array_coo = SparseMatrixCOO(sparse_array)
+
         @testset "conversion" begin
             @test SparseMatrixCSC(sparse_array_coo) == sparse_array
         end
+
+        @testset "sum" begin
+            @test sum(sparse_array) == sum(sparse_array_coo)
+        end
+
+        @testset "prod" begin
+            @test prod(sparse_array) == prod(sparse_array_coo)
+            zerotoone(x) = x == 0 ? one(x) : x
+            @test prod(zerotoone, sparse_array) == prod(zerotoone, sparse_array_coo)
+        end
     end
+
 #    @test isapprox(sum(sparse_array), expected_sum)
 end
