@@ -140,7 +140,7 @@ function hasemptyrows(sp::SparseMatrixCSC)
 end
 
 """
-    renumberrow(sp::SparseMatrixCSC)
+    renumberrows(sp::SparseMatrixCSC)
 
 If `sp` has "empty" rows as determined by `hasemptycols`, then remove these
 columns and renumber the remaining columns. A new `SparseMatrixCSC` is returned.

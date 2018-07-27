@@ -25,10 +25,11 @@ export
 
 include("nzval.jl")
 include("ijv.jl")
-include("coo.jl")
 include("csc.jl")
+include("coo.jl")
 include("abstract.jl")
 
+import .NZVal, .IJV
 
 end # module SparseUtils
 

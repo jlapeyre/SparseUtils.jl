@@ -1,3 +1,5 @@
+# At present, I use a Union type rather than subtyping (in abstract.jl), so that I don't have to
+# implement the entire AbstractArray interface.
 const AbstractSparseMatrixUtils = Union{SparseMatrixCSC, SparseMatrixCOO}
 
 export materialize
@@ -5,7 +7,7 @@ export materialize
 """
     materialize(m::LinearAlgebra.Transpose)
 
-Perform the material transform of the `m.parent`.
+Perform the material transform of the matrix `m.parent`.
 
 `Transpose` is a thin wrapper around `m.parent`.
 This function removes the wrapper and performs the
