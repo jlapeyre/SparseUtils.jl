@@ -27,12 +27,13 @@ end
 materialize(m) = m
 
 """
-    sparsity(sp::AbstractSparseMatrix)
+    density(sp::AbstractSparseMatrix)
 
-Compute the sparisty of `sp`. This assumes that there
+Compute the density of `sp`, the fraction of elements that
+are non-zero This assumes that there
 are no stored values equal to zero.
 """
-function sparsity(sp::AbstractSparseMatrix)
+function density(sp::AbstractSparseMatrix)
     return SparseArrays.nnz(sp) / length(sp)
 end
 
@@ -48,7 +49,7 @@ function summarystats(sp::AbstractSparseMatrix)
         ("size", size(sp)),
         ("num. elements", length(sp)),
         ("num. non-zeros", nnz(sp)),
-        ("sparsity", Printf.@sprintf("%.4e", sparsity(sp))),
+        ("density", Printf.@sprintf("%.4e", density(sp))),
         ("num. stored zeros", count(iszero, SparseArrays.nonzeros(sp))))
         println(rpad(description, padding), ": ", statistic)
     end

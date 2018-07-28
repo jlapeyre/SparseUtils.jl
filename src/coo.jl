@@ -84,6 +84,8 @@ end
 SparseMatrixCSC(coo::SparseMatrixCOO) = SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
 Base.Array(S::SparseMatrixCOO) = IJV.Array(_splat_fields(S)...)
 
+prunecols(S::SparseMatrixCOO, min_entries) = SparseMatrixCOO(IJV.prunecols(_splat_fields(S)..., min_entries)...)
+
 ## renumbercols, renumberrows
 ## FIXME: Factor out the builtin-only core.
 # Wow, this is not super-readable

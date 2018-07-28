@@ -13,18 +13,20 @@ const Callable = Union{Function, Type}
 export
     c_to_julia_index,
     c_to_julia_index!,
-    sparsity,
+    density,
     nnzcounts,
     summarystats,
     nrows,
     ncols,
     prunecols!,
+    prunecols,
     renumbercols,
     renumberrows,
     renumberrowscols,
     hasemptycols,
     hasemptyrows
 
+include("findrepeated.jl")
 include("nzval.jl")
 include("ijv.jl")
 include("csc.jl")

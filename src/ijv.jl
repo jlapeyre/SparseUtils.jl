@@ -17,7 +17,19 @@ Base.getindex(S::MySparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.I, 
 module IJV
 
 import Random
+import StatsBase
 import SparseArrays
+import SparseUtils.findrepeated
+
+spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
+spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
+function spzeros(::Type{Tv}, ::Type{Ti}, m::Integer, n::Integer) where {Tv, Ti}
+    ((m < 0) || (n < 0)) && throw(ArgumentError("invalid Array dimensions"))
+    return (m, n, Ti[], Ti[], Tv[])
+#    SparseMatrixCSC(m, n, fill(one(Ti), n+1), Vector{Ti}(), Vector{Tv}())
+end
+
+### sorting and indexing
 
 """
     issorted(I::AbstractVector, J::AbstractVector)
@@ -76,6 +88,21 @@ function setindex!(I, J, V, val, i::Integer, j::Integer; zeroel=zero(eltype(V)))
     return val
 end
 
+sortpermindex(I, J) = sortperm(1:length(I), by = i -> @inbounds (J[i], I[i]))
+function ijvsort!(I, J, V)
+    p = sortpermindex(I, J)
+    permute!(I, p)
+    permute!(J, p)
+    permute!(V, p)
+    return nothing
+end
+
+function permutedims!(m, n, I, J, V)
+    ijvsort!(J, I, V) # swap I and J before sorting
+    return (n, m, J, I, V)
+end
+permutedims(m, n, I, J, V) = permutedims!(m, n, copy(I), copy(J), copy(V))
+
 function Array(m, n, I, J, V)
     a = zeros(eltype(V), m, n)
     for ind in 1:length(I)
@@ -83,6 +110,8 @@ function Array(m, n, I, J, V)
     end
     return a
 end
+
+### dropzeros, dropstored!
 
 function dropzeros!(I, J, V::AbstractArray{T}) where T
     mask = V .== zero(T)
@@ -99,13 +128,31 @@ function dropstored!(I, J, V, i::Integer, j::Integer)
     return nothing
 end
 
-spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
-spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
-function spzeros(::Type{Tv}, ::Type{Ti}, m::Integer, n::Integer) where {Tv, Ti}
-    ((m < 0) || (n < 0)) && throw(ArgumentError("invalid Array dimensions"))
-    return (m, n, Ti[], Ti[], Tv[])
-#    SparseMatrixCSC(m, n, fill(one(Ti), n+1), Vector{Ti}(), Vector{Tv}())
+### prunecols!
+
+# function prunecols!(J, min_entries)
+#     col_entry_counts = StatsBase.countmap(J)
+#     keepcols = filter(k -> col_entry_counts[k] >= min_entries, keys(col_entry_counts))
+#     old_col_nums = collect(keepcols)
+#     sort!(old_col_nums) # should not be necessary. We can avoid allocating if key avoid sort
+#     renumber_dict = Dict(col_num => i for (i, col_num) in enumerate(old_col_nums))
+#     @show renumber_dict
+#     for i in 1:length(J)
+# #        @show i
+#         J[i] = renumber_dict[J[i]]
+#     end
+#     return J
+# end
+
+## We'd like `x[inds]`, but this appears to be a missing feature in Iterators.flatten
+_applyinds(x, inds) = [x[i] for i in inds]
+
+function prunecols(m, n, I, J, V, min_entries)
+    inds = Iterators.flatten(findrepeated(J, min_entries))
+    return (m, n, map(x -> _applyinds(x, inds), (I, J, V))...)
 end
+
+### rotation
 
 # This is copied from sparsematrix.jl, modified only to change the order of the arguments
 function rot180!(m, n, I, J, V)
@@ -132,22 +179,7 @@ function rotl90!(m, n, I, J, V)
     return (n, m, J, I, V)
 end
 
-sortpermindex(I, J) = sortperm(1:length(I), by = i -> @inbounds (J[i], I[i]))
-
-function ijvsort!(I, J, V)
-    p = sortpermindex(I, J)
-    permute!(I, p)
-    permute!(J, p)
-    permute!(V, p)
-    return nothing
-end
-
-function permutedims!(m, n, I, J, V)
-    ijvsort!(J, I, V) # swap I and J before sorting
-    return (n, m, J, I, V)
-end
-
-permutedims(m, n, I, J, V) = permutedims!(m, n, copy(I), copy(J), copy(V))
+### sprand
 
 _empty_IJV(T) = (Int[], Int[], T[])
 
