@@ -1,3 +1,13 @@
+"""
+    module NZVal
+
+For sparse matrices, algorithms that depend only on nzval, m, and n.
+
+This code is generic, for types in `Core`.
+
+The symbols in `NZVal` should *not* be exported, not even for
+convenience. They conflict with functions in `Base`.
+"""
 module NZVal
 
 ## This module contains code that depends only on a container
@@ -18,7 +28,7 @@ import SparseArrays: _mapreducezeros
 
 @inline numzeros(m, n, numnz) = m * n - numnz
 
-_count(pred, m::Integer, n::Integer, nzval::AbstractArray{T}, numnz::Integer) where T =
+count(pred, m::Integer, n::Integer, nzval::AbstractArray{T}, numnz::Integer) where T =
       Base.count(pred, nzval) +  pred(zero(T)) * numzeros(m, n, numnz)
 
 # sparsematrix.jl: function Base._mapreduce(f, op, ::Base.IndexCartesian, A::SparseMatrixCSC{T}) where T

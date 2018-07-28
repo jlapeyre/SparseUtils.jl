@@ -3,10 +3,9 @@ import SparseArrays:
     dropzeros!, dropzeros
 
 export
-    SparseMatrixCOO,
-    renumbercols!
+    SparseMatrixCOO
 
-struct SparseMatrixCOO{Tv, Ti<:Integer}  #  <: SparseArrays.AbstractSparseMatrix{Tv, Ti}
+struct SparseMatrixCOO{Tv, Ti<:Integer} <: SparseArrays.AbstractSparseMatrix{Tv, Ti}
     m::Int
     n::Int
     Ir::Vector{Ti}
@@ -21,16 +20,18 @@ struct SparseMatrixCOO{Tv, Ti<:Integer}  #  <: SparseArrays.AbstractSparseMatrix
     end
 end
 
-Base.length(coo::SparseMatrixCOO) = coo.n * coo.m
-Base.size(coo::SparseMatrixCOO) = (coo.m, coo.m)
+# Yes, we need this. It would have prevented a bug.
+_splat_fields(S::SparseMatrixCOO) = (S.m, S.n, S.Ir, S.Ic, S.nzval)
+
+Base.length(coo::SparseMatrixCOO) = prod(size(coo))
+Base.size(coo::SparseMatrixCOO) = (coo.m, coo.n)
 Base.eltype(coo::SparseMatrixCOO{Tv, Ti}) where {Tv, Ti} = Tv
 Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S.Ic, S.nzval, i, j)
 Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
+SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.dropstored!(S.Ir, S.Ic, S.nzval, i, j); S)
 Base.issorted(S::SparseMatrixCOO) = IJV.issorted(S.Ir, S.Ic)
 
 spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = SparseMatrixCOO(IJV.spzeros(args...)...)
-#spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = IJV.spzeros(args...)
-
 nnz(coo::SparseMatrixCOO) = length(coo.Ir)
 nonzeros(coo::SparseMatrixCOO) = coo.nzval
 ncols(coo::SparseMatrixCOO) = coo.n
@@ -40,7 +41,7 @@ nrows(coo::SparseMatrixCOO) = coo.m
 # speed dramatically. But, this may depend on Julia version.
 
 @inline nzvalview(S::SparseMatrixCOO) = view(S.nzval, 1:nnz(S))
-@inline Base.count(pred, S::SparseMatrixCOO) = NZVal._count(pred, S.m, S.n, nzvalview(S), length(S.nzval))
+@inline Base.count(pred, S::SparseMatrixCOO) = NZVal.count(pred, S.m, S.n, nzvalview(S), length(S.nzval))
 
 ## FIXME: this is probably never called because SparseMatrixCOO is not a AbstractArray
 Base._mapreduce(f, op, ::Base.IndexCartesian, S::SparseMatrixCOO) =
@@ -50,7 +51,7 @@ Base._mapreduce(f, op, ::Base.IndexCartesian, S::SparseMatrixCOO) =
     NZVal._mapreduce(f, op, S.m, S.n, nzvalview(S), nnz(S))
 
 for (fname, op) in ((:sum, :add_sum), (:maximum, :max), (:minimum, :min), (:prod, :mul_prod))
-    @eval @inline (Base.$fname)(f, S::SparseMatrixCOO) = Base._mapreduce(f, Base.$op, S)
+    @eval @inline (Base.$fname)(f::Callable, S::SparseMatrixCOO) = Base._mapreduce(f, Base.$op, S)
     @eval @inline (Base.$fname)(S::SparseMatrixCOO) = Base._mapreduce(identity, Base.$op, S)
 end
 
@@ -81,7 +82,7 @@ function SparseMatrixCOO(spcsc::SparseMatrixCSC)
 end
 
 SparseMatrixCSC(coo::SparseMatrixCOO) = SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
-Base.Array(S::SparseMatrixCOO) = IJV.Array(S.m, S.n, S.Ir, S.Ic, S.nzval)
+Base.Array(S::SparseMatrixCOO) = IJV.Array(_splat_fields(S)...)
 
 ## renumbercols, renumberrows
 ## FIXME: Factor out the builtin-only core.
@@ -161,7 +162,7 @@ renumberrowscols!(S::SparseMatrixCOO) = S |> renumberrows! |> renumbercols!
 
 for f in (:rotr90, :rotl90, :rot180)
     ijvf = Symbol(f, "!")
-    @eval (Base.$f)(S::SparseMatrixCOO) = SparseMatrixCOO((IJV.$ijvf)(S.m, S.m, copy(S.Ir), copy(S.Ic), copy(S.nzval))...)
+    @eval (Base.$f)(S::SparseMatrixCOO) = SparseMatrixCOO((IJV.$ijvf)(S.m, S.n, copy(S.Ir), copy(S.Ic), copy(S.nzval))...)
 end
 
 @doc """
@@ -184,7 +185,8 @@ rotate `S` 180 degrees.
 
 Transpose `S` in place.
 """
-Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(S.m, S.m, S.Ir, S.Ic, S.nzval)...)
+Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(_splat_fields(S)...)...)
+#Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(S.m, S.n, S.Ir, S.Ic, S.nzval)...)
 
 """
     permutedims(S::SparseMatrixCOO)
@@ -193,8 +195,15 @@ Return a transposed copy of `S`..
 """
 Base.permutedims(S::SparseMatrixCOO) = permutedims!(copy(S))
 
+# const _transpose_type = LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}} where V where T
+
+function Base.copy(S::LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}}) where V where T
+    return Base.permutedims(S.parent)
+end
+
+# We are now testing SparseMatrixCOO <: AbstractSparseMatrix
 # The would require reproducing a lot of code that assumes the sparse matrix is an AbstractArray
-Base.transpose(S::SparseMatrixCOO) = throw(DomainError("Tranpose not implemented because `SparseMatrixCOO` is not an `AbstractArray`"))
+#Base.transpose(S::SparseMatrixCOO) = throw(DomainError("Tranpose not implemented because `SparseMatrixCOO` is not an `AbstractArray`"))
 
 function SparseArrays.sprand(args...; sparsetype=Type{SparseMatrixCOO})
     if sparsetype == SparseMatrixCOO

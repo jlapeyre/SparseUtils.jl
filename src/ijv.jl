@@ -1,19 +1,48 @@
+"""
+    module IJV
+
+Algorithms for sparse matrices stored in COO form.
+
+`IJV` does not depend on any types not in `Core`.
+Do not import any symbol from `IJV` into another module. The methods
+in `IJV` are incompatible with functions in `Base` with the same
+(unqualified) name. Instead, use `IJV` like this
+
+#Example
+
+```julia
+Base.getindex(S::MySparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.I, S.J, S.V, i, j)
+```
+"""
 module IJV
 
 import Random
 import SparseArrays
 
-## Algorithms for coo representation of sparse matrices
-## This module makes use of builtin types only.
+"""
+    issorted(I::AbstractVector, J::AbstractVector)
 
-issorted(I, J) = Base.issorted(zip(J, I))
+Return true if the COO indices `I` and `J` are sorted canonically.
+"""
+issorted(I::AbstractVector, J::AbstractVector) = Base.issorted(zip(J, I))
 
 function getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
+    # colrange = searchsorted(J, j)
+    # isempty(colrange) && return zeroel
+    # rowrange = searchsorted(view(I, colrange), i)
+    # isempty(rowrange) && return zeroel
+    # index = first(rowrange) + first(colrange) - 1
+    index = findindex(I, J, i, j)
+    index == nothing && return zeroel
+    return V[index]
+end
+
+@inline function findindex(I::AbstractArray, J::AbstractArray, i::Integer, j::Integer)
     colrange = searchsorted(J, j)
-    isempty(colrange) && return zeroel
+    isempty(colrange) && return nothing
     rowrange = searchsorted(view(I, colrange), i)
-    isempty(rowrange) && return zeroel
-    return V[first(rowrange) + first(colrange) - 1]
+    isempty(rowrange) && return nothing
+    return first(rowrange) + first(colrange) - 1
 end
 
 function ijvinsert!(ind, arrays = (I, J, V), elements = (i, j, val))
@@ -61,6 +90,15 @@ function dropzeros!(I, J, V::AbstractArray{T}) where T
 end
 dropzeros(I, J, V::AbstractArray) = dropzeros!(copy(I), copy(J), copy(V))
 
+function dropstored!(I, J, V, i::Integer, j::Integer)
+    index = findindex(I, J, i, j)
+    index == nothing && return nothing
+    deleteat!(I, index)
+    deleteat!(J, index)
+    deleteat!(V, index)
+    return nothing
+end
+
 spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
 spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
 function spzeros(::Type{Tv}, ::Type{Ti}, m::Integer, n::Integer) where {Tv, Ti}
@@ -94,7 +132,21 @@ function rotl90!(m, n, I, J, V)
     return (n, m, J, I, V)
 end
 
-permutedims!(m, n, I, J, V) = (n, m, J, I, V)
+sortpermindex(I, J) = sortperm(1:length(I), by = i -> @inbounds (J[i], I[i]))
+
+function ijvsort!(I, J, V)
+    p = sortpermindex(I, J)
+    permute!(I, p)
+    permute!(J, p)
+    permute!(V, p)
+    return nothing
+end
+
+function permutedims!(m, n, I, J, V)
+    ijvsort!(J, I, V) # swap I and J before sorting
+    return (n, m, J, I, V)
+end
+
 permutedims(m, n, I, J, V) = permutedims!(m, n, copy(I), copy(J), copy(V))
 
 _empty_IJV(T) = (Int[], Int[], T[])

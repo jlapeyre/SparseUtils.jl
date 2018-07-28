@@ -8,6 +8,8 @@ import DataUtils
 import StatsBase
 import Printf
 
+const Callable = Union{Function, Type}
+
 export
     c_to_julia_index,
     c_to_julia_index!,

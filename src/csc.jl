@@ -1,3 +1,6 @@
+## The code in this file *does* depend on SparseMatrixCSC
+## The algorithms could be factored out.
+
 """
     c_to_julia_index!(colptr, rowval, nzval)::SparseArrays.SparseMatrixCSC
 
@@ -33,6 +36,7 @@ end
 # use `materialize(transpose(M))`.
 # """
 
+## FIXME: probably should remove this.
 material_transpose(M::SparseMatrixCSC) = SparseArrays.ftranspose(M, identity)
 
 """

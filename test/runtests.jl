@@ -1,8 +1,9 @@
 using SparseUtils
 import SparseArrays
 import SparseArrays: SparseMatrixCSC
-import SparseUtils: transpose, materialize
-import SparseUtils:  SparseMatrixCOO
+import SparseUtils: materialize
+import SparseUtils: SparseMatrixCOO
+import LinearAlgebra
 using Serialization
 using Test
 
@@ -35,6 +36,14 @@ let # typeof(sparse_array) = SparseMatrixCSC
 
         @testset "conversion" begin
             @test SparseMatrixCSC(sparse_array_coo) == sparse_array
+        end
+
+        @testset "transpose" begin
+            pdcoo = permutedims(sparse_array_coo)
+            @test copy(transpose(sparse_array_coo)) == pdcoo
+            @test isa(transpose(sparse_array_coo), LinearAlgebra.Transpose)
+            @test permutedims(pdcoo) == sparse_array_coo
+            @test sparse_array_coo |> transpose |> transpose == sparse_array_coo
         end
 
         @testset "sum" begin
