@@ -19,7 +19,7 @@ module IJV
 import Random
 import StatsBase
 import SparseArrays
-import SparseUtils.findrepeated
+import SparseUtils: findrepeated, shiftrange
 
 spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
 spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
@@ -39,16 +39,12 @@ Return true if the COO indices `I` and `J` are sorted canonically.
 issorted(I::AbstractVector, J::AbstractVector) = Base.issorted(zip(J, I))
 
 function getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
-    # colrange = searchsorted(J, j)
-    # isempty(colrange) && return zeroel
-    # rowrange = searchsorted(view(I, colrange), i)
-    # isempty(rowrange) && return zeroel
-    # index = first(rowrange) + first(colrange) - 1
     index = findindex(I, J, i, j)
     index == nothing && return zeroel
     return V[index]
 end
 
+## This relies on efficient `Union{nothing, Int}`
 @inline function findindex(I::AbstractArray, J::AbstractArray, i::Integer, j::Integer)
     colrange = searchsorted(J, j)
     isempty(colrange) && return nothing
@@ -128,31 +124,38 @@ function dropstored!(I, J, V, i::Integer, j::Integer)
     return nothing
 end
 
-### prunecols!
-
-# function prunecols!(J, min_entries)
-#     col_entry_counts = StatsBase.countmap(J)
-#     keepcols = filter(k -> col_entry_counts[k] >= min_entries, keys(col_entry_counts))
-#     old_col_nums = collect(keepcols)
-#     sort!(old_col_nums) # should not be necessary. We can avoid allocating if key avoid sort
-#     renumber_dict = Dict(col_num => i for (i, col_num) in enumerate(old_col_nums))
-#     @show renumber_dict
-#     for i in 1:length(J)
-# #        @show i
-#         J[i] = renumber_dict[J[i]]
-#     end
-#     return J
-# end
+### prunecols
 
 ## We'd like `x[inds]`, but this appears to be a missing feature in Iterators.flatten
 _applyinds(x, inds) = [x[i] for i in inds]
 
-function prunecols(m, n, I, J, V, min_entries)
-    inds = Iterators.flatten(findrepeated(J, min_entries))
-    return (m, n, map(x -> _applyinds(x, inds), (I, J, V))...)
+function _make_new_Inds(ranges)
+    fillarr = [fill(i, length(ranges[i])) for i in 1:length(ranges)]
+    return reduce(append!, fillarr)
 end
 
-### rotation
+function prunecols(m, n, I, J, V, min_entries; renumber=true)
+    inds = findrepeated(J, min_entries)
+    flatinds = Iterators.flatten(inds)
+    if renumber
+        shiftedinds = map(shiftrange, inds)
+        new_J = _make_new_Inds(shiftedinds)
+        new_n = length(shiftedinds)
+    else
+        new_J = _applyinds(J, flatinds)
+        new_n = n
+    end
+    return (m, new_n, _applyinds(I, flatinds), new_J, _applyinds(V, flatinds))
+end
+
+function prunerows(m, n, I, J, V, min_entries; renumber=true)
+    permmat = permutedims!(m, n, I, J, V)
+    newmat = prunecols(permmat..., min_entries; renumber=renumber)
+    permutedims!(permmat...)
+    return permutedims!(newmat...)
+end
+
+### rotate
 
 # This is copied from sparsematrix.jl, modified only to change the order of the arguments
 function rot180!(m, n, I, J, V)

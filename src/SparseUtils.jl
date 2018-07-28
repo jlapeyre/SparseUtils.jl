@@ -20,6 +20,7 @@ export
     ncols,
     prunecols!,
     prunecols,
+    prunerows,
     renumbercols,
     renumberrows,
     renumberrowscols,

@@ -51,5 +51,22 @@ function findrepeated(iter, min_seq_length::Integer)
     return inds
 end
 
+function compressinds!(inds)
+    isempty(inds) && return inds
+    inds[1] = inds[1] .- (inds[1].start - 1)
+    for i in 2:length(inds)
+        gap = inds[i].start - inds[i-1].stop - 1
+        if gap > 0
+            inds[i] = inds[i] .- gap
+        end
+    end
+    return inds
+end
+compressinds(inds) = compressinds!(copy(inds))
+
+function shiftrange(range, newstart::Integer=1)
+    return range .- (range.start - newstart)
+end
+
 
 nothing

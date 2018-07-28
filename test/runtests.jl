@@ -17,9 +17,9 @@ let # typeof(sparse_array) = SparseMatrixCSC
         @test size(sparse_array) == expected_size
     end
 
-    @testset "sparsity" begin
-        expected_sparsity = 0.008095238095238095
-        @test sparsity(sparse_array) == expected_sparsity
+    @testset "density" begin
+        expected_density = 0.008095238095238095
+        @test density(sparse_array) == expected_density
     end
 
     @testset "transpose" begin
