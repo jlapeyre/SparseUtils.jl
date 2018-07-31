@@ -19,7 +19,7 @@ module IJV
 import Random
 import StatsBase
 import SparseArrays
-import SparseUtils: findrepeated, shiftrange
+import SparseUtils: findrepeated
 
 spzeros(m::Integer, n::Integer) = spzeros(Float64, m, n)
 spzeros(::Type{Tv}, m::Integer, n::Integer) where {Tv} = spzeros(Tv, Int, m, n)
@@ -38,6 +38,12 @@ Return true if the COO indices `I` and `J` are sorted canonically.
 """
 issorted(I::AbstractVector, J::AbstractVector) = Base.issorted(zip(J, I))
 
+"""
+    getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
+
+Return the element at coordinates `(i, j)` in the matrix represented by  `I, J, V`,
+if it exists, and `zeroel` otherwise.
+"""
 function getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
     index = findindex(I, J, i, j)
     index == nothing && return zeroel
@@ -45,6 +51,12 @@ function getindex(I, J, V, i::Integer, j::Integer; zeroel=zero(eltype(V)))
 end
 
 ## This relies on efficient `Union{nothing, Int}`
+"""
+    findindex(I::AbstractArray, J::AbstractArray, i::Integer, j::Integer)
+
+Return the common linear index into `I` and `J` (and `V`) representing coordinates
+`(i, j)`, or `nothing` if there is no value stored for `(i, j)`.
+"""
 @inline function findindex(I::AbstractArray, J::AbstractArray, i::Integer, j::Integer)
     colrange = searchsorted(J, j)
     isempty(colrange) && return nothing
@@ -84,8 +96,8 @@ function setindex!(I, J, V, val, i::Integer, j::Integer; zeroel=zero(eltype(V)))
     return val
 end
 
-sortpermindex(I, J) = sortperm(1:length(I), by = i -> @inbounds (J[i], I[i]))
-function ijvsort!(I, J, V)
+@inline sortpermindex(I, J) = sortperm(1:length(I), by = i -> @inbounds (J[i], I[i]))
+@inline function ijvsort!(I, J, V)
     p = sortpermindex(I, J)
     permute!(I, p)
     permute!(J, p)
@@ -133,6 +145,8 @@ function _make_new_Inds(ranges)
     fillarr = [fill(i, length(ranges[i])) for i in 1:length(ranges)]
     return reduce(append!, fillarr)
 end
+
+shiftrange(range, newstart::Integer=1) = range .- (range.start - newstart)
 
 function prunecols(m, n, I, J, V, min_entries; renumber=true)
     inds = findrepeated(J, min_entries)

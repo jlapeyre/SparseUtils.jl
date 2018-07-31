@@ -63,10 +63,3 @@ function compressinds!(inds)
     return inds
 end
 compressinds(inds) = compressinds!(copy(inds))
-
-function shiftrange(range, newstart::Integer=1)
-    return range .- (range.start - newstart)
-end
-
-
-nothing
