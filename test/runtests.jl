@@ -15,6 +15,7 @@ let # typeof(sparse_array) = SparseMatrixCSC
     expected_sum = 1.6277046559059591
     @testset "measurements" begin
         @test size(sparse_array) == expected_size
+        @test length(sparse_array) == prod(size(sparse_array))
     end
 
     @testset "density" begin
@@ -30,6 +31,15 @@ let # typeof(sparse_array) = SparseMatrixCSC
     @testset "nnz" begin
         # nnz defined for columns
         @test sum(map(i -> SparseArrays.nnz(sparse_array, i),  1:size(sparse_array)[2])) == SparseArrays.nnz(sparse_array)
+    end
+
+    @testset "construction" begin
+        S = SparseArrays.sparse([1], [1], [1], 1, 1; sparsetype=SparseMatrixCOO)
+        @test isa(S, SparseMatrixCOO{Int,Int})
+        @test size(S) == (1, 1)
+        @test length(S) == 1
+        S1 = SparseArrays.sparse([5, 7], [2, 1], [1.0, 2.0], 10, 10; sparsetype=SparseMatrixCOO)
+        @test size(S1) == (10, 10)
     end
 
     let sparse_array_coo = SparseMatrixCOO(sparse_array)

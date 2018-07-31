@@ -2,9 +2,18 @@ import SparseArrays:
     SparseMatrixCSC, AbstractSparseMatrix, nnz, nonzeros, nzvalview,
     dropzeros!, dropzeros
 
+# For adding a method
+import SparseArrays: spzeros, sparse
+
 export
     SparseMatrixCOO
 
+"""
+    SparseMatrixCOO{Tv,Ti<:Integer} <: AbstractSparseMatrix{Tv,Ti}
+
+Matrix type for storing sparse matrices in the
+Coordinate list form (COO) format.
+"""
 struct SparseMatrixCOO{Tv, Ti<:Integer} <: SparseArrays.AbstractSparseMatrix{Tv, Ti}
     m::Int
     n::Int
@@ -30,6 +39,8 @@ Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S
 Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
 SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.dropstored!(S.Ir, S.Ic, S.nzval, i, j); S)
 
+sparse(I, J, V, m, n; sparsetype=SparseMatrixCOO) = SparseMatrixCOO(m, n, I, J, V)
+
 """
     issorted(S::SparseMatrixCOO)
 
@@ -40,6 +51,12 @@ argument will, in general, give incorrect results.
 """
 Base.issorted(S::SparseMatrixCOO) = IJV.issorted(S.Ir, S.Ic)
 
+"""
+    spzeros([type,] m,n; sparsetype=SparseMatrixCOO)
+
+Create a sparse matrix of size `mxn`. If `sparsetype` is ommited,
+a matrix of type `SparseMatrixCSC` will be created.
+"""
 spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = SparseMatrixCOO(IJV.spzeros(args...)...)
 nnz(coo::SparseMatrixCOO) = length(coo.Ir)
 nonzeros(coo::SparseMatrixCOO) = coo.nzval
@@ -120,7 +137,7 @@ rotate `S` 180 degrees.
 """
     permutedims!(S::SparseMatrixCOO)
 
-Transpose `S` in place.
+Permute dimensions `1` and `2` of `S` in place.
 """
 Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(_splat_fields(S)...)...)
 #Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(S.m, S.n, S.Ir, S.Ic, S.nzval)...)
@@ -128,10 +145,12 @@ Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(_splat_
 """
     permutedims(S::SparseMatrixCOO)
 
-Return a transposed copy of `S`..
+Like `permutedims!`, but return a copy.
 """
 Base.permutedims(S::SparseMatrixCOO) = permutedims!(copy(S))
+## FIXME. The two below should be recursive
 Base.copy(S::LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}}) where {T,V} = Base.permutedims(S.parent)
+Base.copy(S::LinearAlgebra.Adjoint{T, SparseMatrixCOO{T,V}}) where {T,V} = conj(Base.permutedims(S.parent))
 
 # We are now testing SparseMatrixCOO <: AbstractSparseMatrix
 # The would require reproducing a lot of code that assumes the sparse matrix is an AbstractArray
