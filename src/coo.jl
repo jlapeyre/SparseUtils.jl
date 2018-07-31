@@ -23,9 +23,9 @@ end
 # Yes, we need this. It would have prevented a bug.
 _splat_fields(S::SparseMatrixCOO) = (S.m, S.n, S.Ir, S.Ic, S.nzval)
 
-Base.length(coo::SparseMatrixCOO) = prod(size(coo))
+#Base.length(coo::SparseMatrixCOO) = prod(size(coo))
 Base.size(coo::SparseMatrixCOO) = (coo.m, coo.n)
-Base.eltype(coo::SparseMatrixCOO{Tv, Ti}) where {Tv, Ti} = Tv
+#Base.eltype(coo::SparseMatrixCOO{Tv, Ti}) where {Tv, Ti} = Tv
 Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S.Ic, S.nzval, i, j)
 Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
 SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.dropstored!(S.Ir, S.Ic, S.nzval, i, j); S)
