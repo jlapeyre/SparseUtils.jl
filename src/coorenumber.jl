@@ -31,3 +31,45 @@ for (dim, Ind) in ((:cols, :Ic), (:rows, :Ir))
         end
     end
 end
+
+@doc """
+    renumberrows(S::SparseMatrixCOO)
+
+Remove rows that have no non-zero values
+and renumber the rows.
+""" renumberrows
+
+@doc """
+    renumberrows!(S::SparseMatrixCOO)
+
+Remove rows that have no non-zero values
+and renumber the rows.
+""" renumberrows!
+
+@doc """
+    renumbercols(S::SparseMatrixCOO)
+
+Remove cols that have no non-zero values
+and renumber the cols.
+""" renumbercols
+
+@doc """
+    renumbercols!(S::SparseMatrixCOO)
+
+Remove cols that have no non-zero values
+and renumber the cols.
+""" renumbercols!
+
+"""
+    renumberrowscols(S::SparseMatrixCOO)
+
+Equivalent to applying `renumberrow!` and `renumbercols`
+"""
+renumberrowscols(S::SparseMatrixCOO) = S |> renumberrows |> renumbercols
+
+"""
+    renumberrowscols!(S::SparseMatrixCOO)
+
+Equivalent to applying `renumberrows!` and `renumbercols!`
+"""
+renumberrowscols!(S::SparseMatrixCOO) = S |> renumberrows! |> renumbercols!

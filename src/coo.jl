@@ -96,47 +96,6 @@ prunecols(S::SparseMatrixCOO, min_entries; renumber=true) =
 prunerows(S::SparseMatrixCOO, min_entries; renumber=true) =
     SparseMatrixCOO(IJV.prunerows(_splat_fields(S)..., min_entries; renumber=renumber)...)
 
-@doc """
-    renumberrows(S::SparseMatrixCOO)
-
-Remove rows that have no non-zero values
-and renumber the rows.
-""" renumberrows
-
-@doc """
-    renumberrows!(S::SparseMatrixCOO)
-
-Remove rows that have no non-zero values
-and renumber the rows.
-""" renumberrows!
-
-@doc """
-    renumbercols(S::SparseMatrixCOO)
-
-Remove cols that have no non-zero values
-and renumber the cols.
-""" renumbercols
-
-@doc """
-    renumbercols!(S::SparseMatrixCOO)
-
-Remove cols that have no non-zero values
-and renumber the cols.
-""" renumbercols!
-
-"""
-    renumberrowscols(S::SparseMatrixCOO)
-
-Equivalent to applying `renumberrow!` and `renumbercols`
-"""
-renumberrowscols(S::SparseMatrixCOO) = S |> renumberrows |> renumbercols
-
-"""
-    renumberrowscols!(S::SparseMatrixCOO)
-
-Equivalent to applying `renumberrows!` and `renumbercols!`
-"""
-renumberrowscols!(S::SparseMatrixCOO) = S |> renumberrows! |> renumbercols!
 
 for f in (:rotr90, :rotl90, :rot180)
     ijvf = Symbol(f, "!")
