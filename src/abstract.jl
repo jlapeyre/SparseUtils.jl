@@ -3,28 +3,27 @@
 # implement the entire AbstractArray interface.
 # const AbstractSparseMatrixUtils = Union{SparseMatrixCSC, SparseMatrixCOO}
 
-export materialize
+# export materialize
+# ## SparseArrays uses `copy` for this. Using copy is confusing to me.
+# ## Not very discoverable.
+# """
+#     materialize(m::LinearAlgebra.Transpose)
 
-## SparseArrays uses `copy` for this. Using copy is confusing to me.
-## Not very discoverable.
-"""
-    materialize(m::LinearAlgebra.Transpose)
+# `Transpose` is a thin wrapper around `m.parent`.
+# This function removes the wrapper and performs the
+# transpose. The documented way to do this is `copy(m)`.
 
-`Transpose` is a thin wrapper around `m.parent`.
-This function removes the wrapper and performs the
-transpose. The documented way to do this is `copy(m)`.
-
-Perform the material transform of the matrix `m.parent`.
-This could call `copy` on `m`, or `permutedims` or
-a specific tranpose routine on the parent. It seems
-that `copy` is optimized, `permutedims` in sparsematrix.jl
-falls back to generic methods (currently).
-"""
-function materialize(m::LinearAlgebra.Transpose)
-    return copy(m)
-#    return permutedims(m.parent)  not optimized for CSC
-end
-materialize(m) = m
+# Perform the material transform of the matrix `m.parent`.
+# This could call `copy` on `m`, or `permutedims` or
+# a specific tranpose routine on the parent. It seems
+# that `copy` is optimized, `permutedims` in sparsematrix.jl
+# falls back to generic methods (currently).
+# """
+# function materialize(m::LinearAlgebra.Transpose)
+#     return copy(m)
+# #    return permutedims(m.parent)  not optimized for CSC
+# end
+# materialize(m) = m
 
 """
     density(sp::AbstractSparseMatrix)

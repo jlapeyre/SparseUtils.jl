@@ -1,5 +1,5 @@
 """
-    module NZVal
+    module SparseUtils.NZVal
 
 For sparse matrices, algorithms that depend only on nzval, m, and n.
 

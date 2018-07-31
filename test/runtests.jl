@@ -1,7 +1,7 @@
 using SparseUtils
 import SparseArrays
 import SparseArrays: SparseMatrixCSC
-import SparseUtils: materialize
+#import SparseUtils: materialize
 import SparseUtils: SparseMatrixCOO
 import LinearAlgebra
 using Serialization
@@ -24,8 +24,8 @@ let # typeof(sparse_array) = SparseMatrixCSC
     end
 
     @testset "transpose" begin
-        @test transpose(sparse_array) |> materialize |> size == (expected_size[2], expected_size[1])
-        @test sparse_array |> transpose |> materialize |> transpose |> materialize == sparse_array
+        @test transpose(sparse_array) |> copy |> size == (expected_size[2], expected_size[1])
+        @test sparse_array |> transpose |> copy |> transpose |> copy == sparse_array
     end
 
     @testset "nnz" begin

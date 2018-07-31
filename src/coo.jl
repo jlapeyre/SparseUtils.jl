@@ -39,6 +39,11 @@ Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S
 Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
 SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.dropstored!(S.Ir, S.Ic, S.nzval, i, j); S)
 
+"""
+    sparse(I, J, V, m, n; sparsetype=SparseMatrixCOO)
+
+Create a sparse matrix of type SparseMatrixCOO
+"""
 sparse(I, J, V, m, n; sparsetype=SparseMatrixCOO) = SparseMatrixCOO(m, n, I, J, V)
 
 """
@@ -58,6 +63,11 @@ Create a sparse matrix of size `mxn`. If `sparsetype` is ommited,
 a matrix of type `SparseMatrixCSC` will be created.
 """
 spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = SparseMatrixCOO(IJV.spzeros(args...)...)
+"""
+    nnz(A::SparseMatrixCOO)
+
+Return the number of stored (filled) elements in `A`.
+"""
 nnz(coo::SparseMatrixCOO) = length(coo.Ir)
 nonzeros(coo::SparseMatrixCOO) = coo.nzval
 ncols(coo::SparseMatrixCOO) = coo.n
@@ -103,16 +113,45 @@ Base.iterate(coo::SparseMatrixCOO, args...) = Base.iterate(SparseArrays.nzvalvie
 
 ### Conversion
 
+"""
+    SparseMatrixCOO(S::SparseMatrixCSC)
+
+Convert `S` to type `SparseMatrixCOO`.
+"""
 SparseMatrixCOO(spcsc::SparseMatrixCSC) =
     SparseMatrixCOO(nrows(spcsc), ncols(spcsc), SparseArrays.findnz(spcsc)...)
+"""
+    SparseMatrixCSC(S::SparseMatrixCOO)
+
+Convert `S` to type `SparseMatrixCSC`.
+"""
 SparseMatrixCSC(coo::SparseMatrixCOO) = SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
+"""
+    Array(S::SparseMatrixCOO)
+
+Convert `S` to a dense matrix.
+"""
 Base.Array(S::SparseMatrixCOO) = IJV.Array(_splat_fields(S)...)
 
+"""
+    prunecols(S::SparseMatrixCOO, min_entries; renumber=true)
+
+Remove all columns from `S` that have fewer than `min_entries` non-zero
+entries. If `renumber` is `true`, renumber the remaining columns
+consecutively starting from `1`.
+"""
 prunecols(S::SparseMatrixCOO, min_entries; renumber=true) =
     SparseMatrixCOO(IJV.prunecols(_splat_fields(S)..., min_entries; renumber=renumber)...)
+
+"""
+    prunerows(S::SparseMatrixCOO, min_entries; renumber=true)
+
+Remove all rows from `S` that have fewer than `min_entries` non-zero
+entries. If `renumber` is `true`, renumber the remaining rows
+consecutively starting from `1`.
+"""
 prunerows(S::SparseMatrixCOO, min_entries; renumber=true) =
     SparseMatrixCOO(IJV.prunerows(_splat_fields(S)..., min_entries; renumber=renumber)...)
-
 
 for f in (:rotr90, :rotl90, :rot180)
     ijvf = Symbol(f, "!")
@@ -156,6 +195,12 @@ Base.copy(S::LinearAlgebra.Adjoint{T, SparseMatrixCOO{T,V}}) where {T,V} = conj(
 # The would require reproducing a lot of code that assumes the sparse matrix is an AbstractArray
 #Base.transpose(S::SparseMatrixCOO) = throw(DomainError("Tranpose not implemented because `SparseMatrixCOO` is not an `AbstractArray`"))
 
+"""
+    sprand(args...; sparsetype=SparseMatrixCOO)
+
+Create a random matrix of type `sparsetype`. See the other methods of `sprand`
+for information on `args`.
+"""
 function SparseArrays.sprand(args...; sparsetype=Type{SparseMatrixCOO})
     if sparsetype == SparseMatrixCOO
         return SparseMatrixCOO(IJV.sprand(args...)...)
