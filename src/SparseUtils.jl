@@ -32,6 +32,7 @@ include("nzval.jl")
 include("ijv.jl")
 include("csc.jl")
 include("coo.jl")
+include("coorenumber.jl")
 include("abstract.jl")
 
 import .NZVal, .IJV

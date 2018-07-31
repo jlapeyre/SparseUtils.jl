@@ -29,6 +29,15 @@ Base.eltype(coo::SparseMatrixCOO{Tv, Ti}) where {Tv, Ti} = Tv
 Base.getindex(S::SparseMatrixCOO, i::Integer, j::Integer) = IJV.getindex(S.Ir, S.Ic, S.nzval, i, j)
 Base.setindex!(S::SparseMatrixCOO, val, i::Integer, j::Integer) = IJV.setindex!(S.Ir, S.Ic, S.nzval, val, i, j)
 SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.dropstored!(S.Ir, S.Ic, S.nzval, i, j); S)
+
+"""
+    issorted(S::SparseMatrixCOO)
+
+Return `true` if the data structures in `S` storing non-zero indices
+are canonically sorted. If the data structures are not sorted,
+then functions taking an `SparseMatrixCOO`
+argument will, in general, give incorrect results.
+"""
 Base.issorted(S::SparseMatrixCOO) = IJV.issorted(S.Ir, S.Ic)
 
 spzeros(args...; sparsetype=Type{SparseMatrixCOO}) = SparseMatrixCOO(IJV.spzeros(args...)...)
@@ -77,10 +86,8 @@ Base.iterate(coo::SparseMatrixCOO, args...) = Base.iterate(SparseArrays.nzvalvie
 
 ### Conversion
 
-function SparseMatrixCOO(spcsc::SparseMatrixCSC)
+SparseMatrixCOO(spcsc::SparseMatrixCSC) =
     SparseMatrixCOO(nrows(spcsc), ncols(spcsc), SparseArrays.findnz(spcsc)...)
-end
-
 SparseMatrixCSC(coo::SparseMatrixCOO) = SparseArrays.sparse(coo.Ir, coo.Ic, coo.nzval, coo.m, coo.n)
 Base.Array(S::SparseMatrixCOO) = IJV.Array(_splat_fields(S)...)
 
@@ -88,40 +95,6 @@ prunecols(S::SparseMatrixCOO, min_entries; renumber=true) =
     SparseMatrixCOO(IJV.prunecols(_splat_fields(S)..., min_entries; renumber=renumber)...)
 prunerows(S::SparseMatrixCOO, min_entries; renumber=true) =
     SparseMatrixCOO(IJV.prunerows(_splat_fields(S)..., min_entries; renumber=renumber)...)
-
-## renumbercols, renumberrows
-## FIXME: Factor out the builtin-only core.
-# Wow, this is not super-readable
-for (dim, Ind) in ((:cols, :Ic), (:rows, :Ir))
-    renumberdim = Symbol(:renumber, dim)
-    renumberdim! = Symbol(renumberdim, :!)
-    _renumberdim! = Symbol(:_, renumberdim!)
-    if dim == :cols
-        call1 = :(SparseMatrixCOO(coo.m, last(newInd), coo.Ir, newInd, coo.nzval))
-        call2 = :(SparseMatrixCOO(coo.m, last(coo.Ic), coo.Ir, coo.Ic, coo.nzval))
-    else
-        call1 = :(SparseMatrixCOO(maximum(newInd), coo.n, newInd, coo.Ic, coo.nzval))
-        call2 = :(SparseMatrixCOO(maximum(coo.Ir), coo.n, coo.Ir, coo.Ic, coo.nzval))
-    end
-    @eval begin
-        function $(renumberdim)(coo::SparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
-            newInd = Vector{Ti}(undef, length(coo.$Ind))
-            $(_renumberdim!)(newInd, coo)
-            return $call1
-        end
-        function $(renumberdim!)(coo::SparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
-            $(_renumberdim!)(coo.Ic, coo)
-            return $call2
-        end
-        function $(_renumberdim!)(newInd, coo::SparseMatrixCOO{Tv,Ti}) where {Tv,Ti}
-            oldIndlist = sort!(unique(coo.$Ind))
-            for j in 1:length(coo.$Ind)
-                newInd[j] = searchsortedfirst(oldIndlist, coo.$Ind[j])
-            end
-            return nothing
-        end
-    end
-end
 
 @doc """
     renumberrows(S::SparseMatrixCOO)
@@ -199,12 +172,7 @@ Base.permutedims!(S::SparseMatrixCOO) = SparseMatrixCOO(IJV.permutedims!(_splat_
 Return a transposed copy of `S`..
 """
 Base.permutedims(S::SparseMatrixCOO) = permutedims!(copy(S))
-
-# const _transpose_type = LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}} where V where T
-
-function Base.copy(S::LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}}) where V where T
-    return Base.permutedims(S.parent)
-end
+Base.copy(S::LinearAlgebra.Transpose{T, SparseMatrixCOO{T,V}}) where {T,V} = Base.permutedims(S.parent)
 
 # We are now testing SparseMatrixCOO <: AbstractSparseMatrix
 # The would require reproducing a lot of code that assumes the sparse matrix is an AbstractArray
