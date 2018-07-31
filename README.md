@@ -10,11 +10,4 @@ Windows: [![Build Status](https://ci.appveyor.com/api/projects/status/github/jla
 [![Coverage Status](https://coveralls.io/repos/jlapeyre/SparseUtils.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/jlapeyre/SparseUtils.jl?branch=master)
 [![codecov.io](http://codecov.io/github/jlapeyre/SparseUtils.jl/coverage.svg?branch=master)](http://codecov.io/github/jlapeyre/SparseUtils.jl?branch=master)
 
-See the documentation pages or the doc strings for 
-
-* `nnz` extended to operate on columns
-* `c_to_julia_index`, `c_to_julia_index!` import zero-based-indexing data
-* `sparsity` compute sparsity
-* `transpose(M::SparseMatrixCSC, lazy=true)` return a lazy or material transpose.
-* `sparse_stats` print some measurements
-* `nnzcounts` count map over columns of number of non-zeros
+See the [documentation](https://jlapeyre.github.io/SparseUtils.jl/latest)

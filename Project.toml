@@ -2,7 +2,7 @@ name = "SparseUtils"
 desc = "utilities for sparse matrices"
 authors = ["John Lapeyre"]
 license = "MIT"
-version = "0.1.1-dev.001"
+version = "0.1.1"
 uuid = "36ea9a44-8df6-11e8-3729-cfe5a7e072ff"
 
 [deps]
