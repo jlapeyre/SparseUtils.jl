@@ -42,7 +42,7 @@ SparseArrays.dropstored!(S::SparseMatrixCOO, i::Integer, j::Integer) = (IJV.drop
 """
     sparse(I, J, V, m, n; sparsetype=SparseMatrixCOO)
 
-Create a sparse matrix of type SparseMatrixCOO
+Create a sparse matrix of type SparseMatrixCOO.
 """
 sparse(I, J, V, m, n; sparsetype=SparseMatrixCOO) = SparseMatrixCOO(m, n, I, J, V)
 
