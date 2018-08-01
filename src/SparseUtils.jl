@@ -4,7 +4,7 @@ module SparseUtils
 import SparseArrays
 import SparseArrays: SparseMatrixCSC, nnz
 import LinearAlgebra
-import DataUtils
+#import DataUtils
 import StatsBase
 import Printf
 
@@ -34,6 +34,8 @@ include("csc.jl")
 include("coo.jl")
 include("coorenumber.jl")
 include("abstract.jl")
+include("countmap.jl")
+
 
 import .NZVal, .IJV
 

@@ -70,7 +70,7 @@ julia> collect(Iterators.take(conns,3))
 ```
 """
 function nnzcounts(sp::SparseMatrixCSC; rev=true, byvalue=true)
-    spcountmap = DataUtils.countmap(nnzcols(sp), datatype=Int)
+    spcountmap = SparseUtils.countmap(nnzcols(sp), datatype=Int)
     sorted_spcountmap = StatsBase.sort(spcountmap, rev=rev, byvalue=rev)
     return sorted_spcountmap
 end
